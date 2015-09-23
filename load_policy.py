@@ -2,6 +2,7 @@
 #   load_policy.py
 #
 import sys
+import time
 import json
 from pprint import pprint
 import urllib2
@@ -11,11 +12,11 @@ from collections import defaultdict
 
 def ReadPolJSON():
     #filename = 'leased_policy.json'
-    #filename = 'claims_policies.json'
-    filename = 'renewal_policies.json'
+    filename = 'claims_policies.json'
+    #filename = 'renewal_policies.json'
 
     global outfile
-    outputfile = 'renewal_input.txt'
+    outputfile = 'loaded_policies.txt'
     outfile = open(outputfile, 'w')
     
     global server
@@ -71,6 +72,11 @@ def CreateQuote(pol_json):
     #print(response.text)
     if response.status_code != 200:
         print('vehicle delete response: %s' % response.status_code)
+        
+    #######################################################
+    # add a wait to allow current state db to catch up
+    time.sleep(2)
+    #######################################################
     
     # add vehicles from input json back on
     #  create json for coverages 
@@ -86,6 +92,9 @@ def CreateQuote(pol_json):
         veh['model'] = vehicle['model']
         veh['trim'] = vehicle['trim']
         veh['vin'] = vehicle['vin']
+        
+        #print('vin = %s' % veh['vin'])
+        
         veh['lengthOfOwnership'] = vehicle['lengthOfOwnership']
         veh['ownership'] = vehicle['ownership']
         veh['businessUse'] = vehicle['businessUse']
@@ -98,11 +107,11 @@ def CreateQuote(pol_json):
         response = requests.post(url, data=payload, headers=headers)
         response_json = json.loads(response.text)
         
-        quote_stream_rev = response_json['streamRevision']
         #print(quote_stream_rev)
         if response.status_code != 200:
             print('Add vehicle status: %s' % response.status_code)
-
+            print(response_json)
+        quote_stream_rev = response_json['streamRevision']
         # read the response to get new vehicle id
         #response_json = json.loads(response.text)
         vehicle_body['id'] = response_json['events'][0]['vehicle']['id']
@@ -342,8 +351,14 @@ def CreateQuote(pol_json):
 '''  
 def main():
    
+   start_time = time.time()
    
    ReadPolJSON()
+   
+   end_time = time.time()- start_time
+
+   print(' ')
+   print('Total elapsed time: %s seconds' % end_time)
    
    
    
